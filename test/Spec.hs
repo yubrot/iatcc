@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
+import Control.Monad (void)
+import Control.Exception (SomeException, try)
+import Data.String (fromString)
 import Iatcc.AST
 import Iatcc.Parser (Parser, parse, constant, expr, program)
 import Iatcc.Compiler (exec)

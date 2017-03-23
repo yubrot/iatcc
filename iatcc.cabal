@@ -16,12 +16,12 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Prelude
-                       Iatcc.AST
+  exposed-modules:     Iatcc.AST
                        Iatcc.Parser
                        Iatcc.Emitter
                        Iatcc.Compiler
-  other-modules:       Paths_iatcc
+  other-modules:       Prelude
+                       Paths_iatcc
   ghc-options:         -Wall -Werror -fno-warn-type-defaults -fno-warn-name-shadowing
   build-depends:       base-noprelude, basic-prelude, mtl, megaparsec, temporary, process
   default-extensions:  OverloadedStrings
@@ -42,7 +42,7 @@ executable iatcc
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base-noprelude, iatcc
+  build-depends:       base, iatcc
   default-extensions:  OverloadedStrings
   default-language:    Haskell2010
 
@@ -51,7 +51,7 @@ test-suite iatcc-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   ghc-options:         -Wall -Werror -threaded -rtsopts -with-rtsopts=-N -fno-warn-name-shadowing -fno-warn-missing-signatures
-  build-depends:       base-noprelude, HUnit, iatcc
+  build-depends:       base, HUnit, iatcc
   default-extensions:  OverloadedStrings
   default-language:    Haskell2010
 
