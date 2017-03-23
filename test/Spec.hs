@@ -1,5 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, OverloadedStrings #-}
 
 import Control.Monad (void)
 import Control.Exception (SomeException, try)
