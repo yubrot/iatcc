@@ -1,5 +1,9 @@
 module Iatcc.Compiler where
 
+import Prelude hiding (writeFile)
+import Control.Exception (throwIO)
+import Data.Text (Text, pack)
+import Data.Text.IO (writeFile)
 import System.IO (hClose)
 import System.IO.Temp (withSystemTempFile)
 import System.Process (callProcess, readProcess)
@@ -17,7 +21,7 @@ exec src = case Parser.parse Parser.program "exectmp" src of
 execExpr :: Program -> IO Text
 execExpr program = withSystemTempFilePath "exec" $ \tmp -> do
   compile tmp program
-  fromString <$> readProcess tmp [] []
+  pack <$> readProcess tmp [] []
 
 compile :: String -> Program -> IO ()
 compile dest program = withSystemTempFilePath "iatcc.s" $ \tmp -> do

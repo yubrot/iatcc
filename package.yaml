@@ -19,10 +19,12 @@ ghc-options:
 - -fno-warn-type-defaults
 - -fno-warn-name-shadowing
 
+dependencies:
+- base
+
 library:
   source-dirs: src
   other-modules:
-  - Prelude
   - Paths_iatcc
   default-extensions:
   - OverloadedStrings
@@ -44,8 +46,6 @@ library:
   - TypeFamilies
   - ConstraintKinds
   dependencies:
-  - base-noprelude
-  - basic-prelude
   - mtl
   - text
   - megaparsec
@@ -61,7 +61,6 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - base
     - text
     - iatcc
 
@@ -74,6 +73,5 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - base
     - HUnit
     - iatcc

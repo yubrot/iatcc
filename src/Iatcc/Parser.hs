@@ -6,7 +6,8 @@ module Iatcc.Parser
   , constant
   ) where
 
-import Prelude hiding (try)
+import Control.Monad
+import Data.Text (Text, pack)
 import Data.Char (isLetter)
 import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Text
@@ -123,7 +124,7 @@ integer :: Parser Integer
 integer = lexeme L.integer
 
 identifier :: Parser Text
-identifier = lexeme $ fmap fromString $ (:) <$> letterChar <*> many (alphaNumChar <|> char '_')
+identifier = lexeme $ fmap pack $ (:) <$> letterChar <*> many (alphaNumChar <|> char '_')
 
 symbol :: String -> Parser ()
 symbol = lexeme . void . string

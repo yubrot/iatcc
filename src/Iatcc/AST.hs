@@ -1,5 +1,7 @@
 module Iatcc.AST where
 
+import Data.Text (Text)
+
 data Program
   = PExpr Expr
   | PLetRec [Fun] Expr
