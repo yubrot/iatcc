@@ -1,0 +1,79 @@
+name:        iatcc
+version:     "0.1.0.0"
+github:      yubrot/iatcc
+license:     BSD3
+author:      yubrot
+maintainer:  yubrot@gmail.com
+copyright:   2017-2018 yubrot
+
+extra-source-files:
+- README.md
+
+data-files:
+- rt/rt.c
+- rt/sys.c
+
+ghc-options:
+- -Wall
+- -Werror
+- -fno-warn-type-defaults
+- -fno-warn-name-shadowing
+
+library:
+  source-dirs: src
+  other-modules:
+  - Prelude
+  - Paths_iatcc
+  default-extensions:
+  - OverloadedStrings
+  - TypeOperators
+  - BangPatterns
+  - LambdaCase
+  - RecordWildCards
+  - BinaryLiterals
+  - PatternSynonyms
+  - ViewPatterns
+  - StandaloneDeriving
+  - DeriveFunctor
+  - DeriveFoldable
+  - DeriveTraversable
+  - FlexibleContexts
+  - FlexibleInstances
+  - MultiParamTypeClasses
+  - FunctionalDependencies
+  - TypeFamilies
+  - ConstraintKinds
+  dependencies:
+  - base-noprelude
+  - basic-prelude
+  - mtl
+  - text
+  - megaparsec
+  - temporary
+  - process
+
+executables:
+  iatcc:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - base
+    - text
+    - iatcc
+
+tests:
+  iatcc-test:
+    main: Spec.hs
+    source-dirs: test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - base
+    - HUnit
+    - iatcc
