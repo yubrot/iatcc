@@ -71,8 +71,8 @@ execTests = "exec" ~: TestList
   ]
 
 fixnumMin, fixnumMax :: Integer
-fixnumMin = - (2 ^ 29)
-fixnumMax = 2 ^ 29 - 1
+fixnumMin = - (2 ^ 61)
+fixnumMax = 2 ^ 61 - 1
 
 constantTest :: String -> Test
 constantTest c = c ~>> c

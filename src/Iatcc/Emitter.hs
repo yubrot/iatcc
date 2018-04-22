@@ -47,11 +47,11 @@ emitProgram (PLetRec funs expr) = do
 
 emitProgram (PExpr expr) = do
   emitFunctionHeader "scheme_entry"
-  emitRegisterSave "4(%esp)" "%ecx" -- args[0]: context* ctx
-  emit "movl 12(%esp), %ebp"        -- args[2]: char* heap
-  emit "movl 8(%esp), %esp"         -- args[1]: char* stack
+  emitRegisterSave "%rdi" "%rcx"  -- args[0]: context* ctx
+  emit "movq %rdx, %rbp"          -- args[2]: char* heap
+  emit "movq %rsi, %rsp"          -- args[1]: char* stack
   emit "call L_scheme_entry"
-  emitRegisterRestore "%ecx"
+  emitRegisterRestore "%rcx"
   emit "ret"
   emitFunctionHeader "L_scheme_entry"
   emitExpr (-wordSize) True expr
@@ -59,30 +59,26 @@ emitProgram (PExpr expr) = do
 
 emitRegisterSave :: Text -> Text -> Emitter ()
 emitRegisterSave arg reg = do
-  emit $ "movl " <> arg <> ", " <> reg
-  emit $ "movl %ebx, 4(" <> reg <> ")"
-  emit $ "movl %esi, 16(" <> reg <> ")"
-  emit $ "movl %edi, 20(" <> reg <> ")"
-  emit $ "movl %ebp, 24(" <> reg <> ")"
-  emit $ "movl %esp, 28(" <> reg <> ")"
+  emit $ "movq " <> arg <> ", " <> reg
+  emit $ "movq %rbx, 0(" <> reg <> ")"
+  emit $ "movq %rbp, 8(" <> reg <> ")"
+  emit $ "movq %rsp, 16(" <> reg <> ")"
 
 emitRegisterRestore :: Text -> Emitter ()
 emitRegisterRestore reg = do
-  emit $ "movl 4(" <> reg <> "), %ebx"
-  emit $ "movl 16(" <> reg <> "), %esi"
-  emit $ "movl 20(" <> reg <> "), %edi"
-  emit $ "movl 24(" <> reg <> "), %ebp"
-  emit $ "movl 28(" <> reg <> "), %esp"
+  emit $ "movq 0(" <> reg <> "), %rbx"
+  emit $ "movq 8(" <> reg <> "), %rbp"
+  emit $ "movq 16(" <> reg <> "), %rsp"
 
 emitArgBinds :: StackIndex -> [Text] -> (StackIndex -> Emitter a) -> Emitter a
 emitArgBinds stackIndex params body = do
-  let refs = zipWith (\i param -> (param, VarRef $ tshow i <> "(%esp)")) [-wordSize, -wordSize*2..] params
+  let refs = zipWith (\i param -> (param, VarRef $ tshow i <> "(%rsp)")) [-wordSize, -wordSize*2..] params
   local (refs <>) (body (stackIndex - length params * wordSize))
 
 emitExpr :: StackIndex -> Bool -> Expr -> Emitter ()
 emitExpr stackIndex tailPos = \case
   EConst c ->
-    emit $ "movl $" <> immediateRep c <> ", %eax"
+    emit $ "movq $" <> immediateRep c <> ", %rax"
   EUnary op e -> do
     emitExpr stackIndex False e
     emitUnary op
@@ -130,7 +126,7 @@ emitExpr stackIndex tailPos = \case
   EVar var -> do
     refs <- ask
     case lookup var refs of
-      Just (VarRef ref) -> emit $ "movl " <> ref <> ", %eax"
+      Just (VarRef ref) -> emit $ "movq " <> ref <> ", %rax"
       _ -> error $ "Unbound variable: " <> show var
   EApp fun args -> do
     refs <- ask
@@ -141,26 +137,26 @@ emitExpr stackIndex tailPos = \case
           void $ emitStackSave (stackIndex + i)
         if tailPos then do
           forM_ (take (length args) [-wordSize, -wordSize*2..]) $ \i -> do
-            emit $ "movl " <> tshow (stackIndex + i) <> "(%esp), %eax"
-            emit $ "movl %eax, " <> tshow i <> "(%esp)"
+            emit $ "movq " <> tshow (stackIndex + i) <> "(%rsp), %rax"
+            emit $ "movq %rax, " <> tshow i <> "(%rsp)"
           emit $ "jmp " <> ref
         else do
-          emit $ "addl $" <> tshow (stackIndex + wordSize) <> ", %esp"
+          emit $ "addq $" <> tshow (stackIndex + wordSize) <> ", %rsp"
           emit $ "call " <> ref
-          emit $ "subl $" <> tshow (stackIndex + wordSize) <> ", %esp"
+          emit $ "subq $" <> tshow (stackIndex + wordSize) <> ", %rsp"
       _ -> error $ "Unknown function: " <> show fun
 
 emitUnary :: UnaryOp -> Emitter ()
 emitUnary = \case
   UnaryFxAdd1 ->
-    emit $ "addl $" <> immediateRep (CFixnum 1) <> ", %eax"
+    emit $ "addq $" <> immediateRep (CFixnum 1) <> ", %rax"
   UnaryFxSub1 ->
-    emit $ "subl $" <> immediateRep (CFixnum 1) <> ", %eax"
+    emit $ "subq $" <> immediateRep (CFixnum 1) <> ", %rax"
   UnaryCharToFx ->
-    emit $ "shrl $" <> tshow (charShift - fxShift) <> ", %eax"
+    emit $ "shrq $" <> tshow (charShift - fxShift) <> ", %rax"
   UnaryFxToChar -> do
-    emit $ "shll $" <> tshow (charShift - fxShift) <> ", %eax"
-    emit $ "orl $" <> tshow charTag <> ", %eax"
+    emit $ "shlq $" <> tshow (charShift - fxShift) <> ", %rax"
+    emit $ "orq $" <> tshow charTag <> ", %rax"
   UnaryIsFixnum -> do
     emit $ "andb $" <> tshow fxTagMask <> ", %al"
     emit $ "cmpb $" <> tshow fxTag <> ", %al"
@@ -174,7 +170,7 @@ emitUnary = \case
     emit $ "cmpb $" <> tshow charTag <> ", %al"
     emitToBool "sete"
   UnaryIsFxZero -> do
-    emit $ "cmpl $" <> immediateRep (CFixnum 0) <> ", %eax"
+    emit $ "cmpq $" <> immediateRep (CFixnum 0) <> ", %rax"
     emitToBool "sete"
   UnaryIsNull -> do
     emit $ "cmpb $" <> tshow constNull <> ", %al"
@@ -187,11 +183,11 @@ emitUnary = \case
     emit $ "cmpb $" <> tshow constFalse <> ", %al"
     emitToBool "sete"
   UnaryLogicalNot -> do
-    emit $ "xorl $" <> tshow ((-1) `xor` fxTagMask) <> ", %eax"
+    emit $ "xorq $" <> tshow ((-1) `xor` fxTagMask) <> ", %rax"
   UnaryCar ->
-    emit $ "movl " <> tshow (0 - pairTag) <> "(%eax), %eax"
+    emit $ "movq " <> tshow (0 - pairTag) <> "(%rax), %rax"
   UnaryCdr ->
-    emit $ "movl " <> tshow (toInteger wordSize - pairTag) <> "(%eax), %eax"
+    emit $ "movq " <> tshow (toInteger wordSize - pairTag) <> "(%rax), %rax"
 
 emitBinary :: BinaryOp -> Text -> Emitter ()
 emitBinary op lhs = case op of
@@ -202,52 +198,52 @@ emitBinary op lhs = case op of
   BinarySeq ->
     error "emitBinary BinarySeq"
   BinaryAdd ->
-    emit $ "addl " <> lhs <> ", %eax"
+    emit $ "addq " <> lhs <> ", %rax"
   BinarySub -> do
-    emit $ "subl " <> lhs <> ", %eax"
-    emit $ "neg %eax"
+    emit $ "subq " <> lhs <> ", %rax"
+    emit $ "neg %rax"
     emit $ "andb $" <> tshow ((-1) `xor` fxTagMask) <> ", %al"
   BinaryMul -> do
-    emit $ "sarl $2, %eax"
-    emit $ "imull " <> lhs <> ", %eax"
+    emit $ "sarq $2, %rax"
+    emit $ "imulq " <> lhs <> ", %rax"
   BinaryCons -> do
     -- cdr
-    emit $ "movl %eax, " <> tshow wordSize <> "(%ebp)"
-    emit $ "movl " <> lhs <> ", %eax"
+    emit $ "movq %rax, " <> tshow wordSize <> "(%rbp)"
+    emit $ "movq " <> lhs <> ", %rax"
     -- car
-    emit $ "movl %eax, (%ebp)"
+    emit $ "movq %rax, (%rbp)"
 
-    emit $ "movl %ebp, %eax"
-    emit $ "orl $" <> tshow pairTag <> ", %eax"
-    emit $ "addl $" <> tshow (wordSize * 2) <> ", %ebp"
+    emit $ "movq %rbp, %rax"
+    emit $ "orq $" <> tshow pairTag <> ", %rax"
+    emit $ "addq $" <> tshow (wordSize * 2) <> ", %rbp"
   BinaryLogicalAnd -> do
-    emit $ "andl " <> lhs <> ", %eax"
+    emit $ "andq " <> lhs <> ", %rax"
   BinaryLogicalOr -> do
-    emit $ "orl " <> lhs <> ", %eax"
+    emit $ "orq " <> lhs <> ", %rax"
   BinaryEqual -> do
-    emit $ "cmpl " <> lhs <> ", %eax"
+    emit $ "cmpq " <> lhs <> ", %rax"
     emitToBool "sete"
   BinaryNotEqual -> do
-    emit $ "cmpl " <> lhs <> ", %eax"
+    emit $ "cmpq " <> lhs <> ", %rax"
     emitToBool "setne"
   BinaryLesser -> do
-    emit $ "cmpl " <> lhs <> ", %eax"
+    emit $ "cmpq " <> lhs <> ", %rax"
     emitToBool "setg"
   BinaryLesserEqual -> do
-    emit $ "cmpl " <> lhs <> ", %eax"
+    emit $ "cmpq " <> lhs <> ", %rax"
     emitToBool "setge"
   BinaryGreater -> do
-    emit $ "cmpl " <> lhs <> ", %eax"
+    emit $ "cmpq " <> lhs <> ", %rax"
     emitToBool "setl"
   BinaryGreaterEqual -> do
-    emit $ "cmpl " <> lhs <> ", %eax"
+    emit $ "cmpq " <> lhs <> ", %rax"
     emitToBool "setle"
   BinarySetCar -> do
-    emit $ "movl " <> lhs <> ", %edx"
-    emit $ "movl %eax, " <> tshow (0 - pairTag) <> "(%edx)"
+    emit $ "movq " <> lhs <> ", %rdx"
+    emit $ "movq %rax, " <> tshow (0 - pairTag) <> "(%rdx)"
   BinarySetCdr -> do
-    emit $ "movl " <> lhs <> ", %edx"
-    emit $ "movl %eax, " <> tshow (toInteger wordSize - pairTag) <> "(%edx)"
+    emit $ "movq " <> lhs <> ", %rdx"
+    emit $ "movq %rax, " <> tshow (toInteger wordSize - pairTag) <> "(%rdx)"
 
 emitFunctionHeader :: Text -> Emitter ()
 emitFunctionHeader name = do
@@ -259,17 +255,17 @@ emitFunctionHeader name = do
 emitToBool :: Text -> Emitter ()
 emitToBool cond = do
   emit $ cond <> " %al"
-  emit $ "movzbl %al, %eax"
-  emit $ "shll $" <> tshow booleanShift <> ", %eax"
-  emit $ "orl $" <> tshow booleanTag <> ", %eax"
+  emit $ "movzbq %al, %rax"
+  emit $ "shlq $" <> tshow booleanShift <> ", %rax"
+  emit $ "orq $" <> tshow booleanTag <> ", %rax"
 
 emitLabel :: Text -> Emitter ()
 emitLabel = tell . (<> ":\n")
 
 emitStackSave :: StackIndex -> Emitter (Text, StackIndex)
 emitStackSave stackIndex = do
-  emit $ "movl %eax, " <> tshow stackIndex <> "(%esp)"
-  return (tshow stackIndex <> "(%esp)", stackIndex - wordSize)
+  emit $ "movq %rax, " <> tshow stackIndex <> "(%rsp)"
+  return (tshow stackIndex <> "(%rsp)", stackIndex - wordSize)
 
 emit :: Text -> Emitter ()
 emit = tell . (\s -> "    " <> s <> "\n")
@@ -283,7 +279,7 @@ uniqueLabel = do
 immediateRep :: Constant -> Text
 immediateRep = \case
   CFixnum n ->
-    if negate (2 ^ 29) <= n && n <= (2 ^ 29) - 1
+    if negate (2 ^ 61) <= n && n <= (2 ^ 61) - 1
       then tshow $ n `shiftL` fxShift
       else error ("Fixnum overflow: " <> show n)
   CBoolean b ->
@@ -296,7 +292,7 @@ immediateRep = \case
     tshow constNull
 
 wordSize :: Int
-wordSize = 4
+wordSize = 8
 
 otherShift, charShift, booleanShift, fxShift :: Int
 otherShift = 4

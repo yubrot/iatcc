@@ -3,17 +3,12 @@
 #include <stdbool.h>
 
 typedef struct {
-  void* eax; // 0   scratch  (caller-save)
-  void* ebx; // 4   preserve (callee-save)
-  void* ecx; // 8   scratch
-  void* edx; // 12  scratch
-  void* esi; // 16  preserve
-  void* edi; // 20  preserve
-  void* ebp; // 24  preserve
-  void* esp; // 28  preserve
+  void* rbx; // 0   preserve (callee-save)
+  void* rbp; // 8   preserve
+  void* rsp; // 16  preserve
 } context;
 
-typedef unsigned int ptr;
+typedef unsigned long long ptr;
 extern ptr scheme_entry(context* ctx, char* stack, char* heap);
 
 extern char* allocate_protected_space(int size);
@@ -76,8 +71,8 @@ static void print_ptr(ptr x) {
     printf(")");
 
   } else {
-    int v = ((int) x) >> FIXNUM_SHIFT;
-    printf("%d", v);
+    long long v = ((long long) x) >> FIXNUM_SHIFT;
+    printf("%lld", v);
   }
 }
 
