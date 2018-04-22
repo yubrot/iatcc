@@ -70,13 +70,17 @@ execTests = "exec" ~: TestList
   , exec1_1Tests
   ]
 
+fixnumMin, fixnumMax :: Integer
+fixnumMin = - (2 ^ 29)
+fixnumMax = 2 ^ 29 - 1
+
 constantTest :: String -> Test
 constantTest c = c ~>> c
 
 exec1_1Tests :: Test
 exec1_1Tests = "1-1" ~: TestList (map constantTest nums)
  where
-  nums = ["0", "1", "-1", "10", "-10", "2736", "-2736", "536870911", "-536870912"]
+  nums = ["0", "1", "-1", "10", "-10", "2736", "-2736", show fixnumMax, show fixnumMin]
 
 exec1_2Tests :: Test
 exec1_2Tests = "1-2" ~: TestList (map constantTest (bools ++ objs ++ chars))
@@ -92,8 +96,8 @@ exec1_3Tests = "1-3" ~: TestList
   , "inc 1" ~>> o "2"
   , "inc -100" ~>> o "-99"
   , "inc 1000" ~>> o "1001"
-  , "inc 536870910" ~>> o "536870911"
-  , "inc -536870912" ~>> o "-536870911"
+  , ("inc " ++ show (fixnumMax - 1)) ~>> show fixnumMax
+  , ("inc " ++ show fixnumMin) ~>> show (fixnumMin + 1)
   , "inc (inc 0)" ~>> o "2"
   , "inc (inc (inc (inc (inc (inc 12)))))" ~>> o "18"
 
@@ -102,8 +106,8 @@ exec1_3Tests = "1-3" ~: TestList
   , "dec 1" ~>> o "0"
   , "dec -100" ~>> o "-101"
   , "dec 1000" ~>> o "999"
-  , "dec 536870911" ~>> o "536870910"
-  , "dec -536870911" ~>> o "-536870912"
+  , ("dec " ++ show fixnumMax) ~>> show (fixnumMax - 1)
+  , ("dec " ++ show (fixnumMin + 1)) ~>> show fixnumMin
   , "dec (dec 0)" ~>> o "-2"
   , "dec (dec (dec (dec (dec (dec 12)))))" ~>> o "6"
   , "dec (inc 0)" ~>> o "0"
@@ -128,8 +132,8 @@ exec1_3Tests = "1-3" ~: TestList
   , "fixnum? -1" ~>> o "true"
   , "fixnum? 37287" ~>> o "true"
   , "fixnum? -23873" ~>> o "true"
-  , "fixnum? 536870911" ~>> o "true"
-  , "fixnum? -536870912" ~>> o "true"
+  , ("fixnum? " ++ show fixnumMax) ~>> o "true"
+  , ("fixnum? " ++ show fixnumMin) ~>> o "true"
   , "fixnum? true" ~>> o "false"
   , "fixnum? false" ~>> o "false"
   , "fixnum? ()" ~>> o "false"
@@ -191,8 +195,8 @@ exec1_3Tests = "1-3" ~: TestList
   , "~ -1" ~>> o "0"
   , "~ 1" ~>> o "-2"
   , "~ -2" ~>> o "1"
-  , "~ 536870911" ~>> o "-536870912"
-  , "~ -536870912" ~>> o "536870911"
+  , ("~ " ++ show fixnumMax) ~>> show fixnumMin
+  , ("~ " ++ show fixnumMin) ~>> show fixnumMax
   , "~ (~ 237463)" ~>> o "237463"
   ]
 
@@ -247,11 +251,11 @@ exec1_5Tests = "1-5" ~: TestList
   , "1 + -2" ~>> o "-1"
   , "-1 + 2" ~>> o "1"
   , "-1 + -2" ~>> o "-3"
-  , "536870911 + -1" ~>> o "536870910"
-  , "536870910 + 1" ~>> o "536870911"
-  , "-536870912 + 1" ~>> o "-536870911"
-  , "-536870911 + -1" ~>> o "-536870912"
-  , "536870911 + -536870912" ~>> o "-1"
+  , (show fixnumMax ++ " + -1") ~>> show (fixnumMax-1)
+  , (show (fixnumMax-1) ++ " + 1") ~>> show fixnumMax
+  , (show fixnumMin ++ " + 1") ~>> show (fixnumMin+1)
+  , (show (fixnumMin+1) ++ " + -1") ~>> show fixnumMin
+  , (show fixnumMax ++ " + " ++ show fixnumMin) ~>> o "-1"
   , "1 + (2 + 3)" ~>> o "6"
   , "1 + (2 + -3)" ~>> o "0"
   , "1 + (-2 + 3)" ~>> o "2"
@@ -275,17 +279,17 @@ exec1_5Tests = "1-5" ~: TestList
   , "1 - -2" ~>> o "3"
   , "-1 - 2" ~>> o "-3"
   , "-1 - -2" ~>> o "1"
-  , "536870910 - -1" ~>> o "536870911"
-  , "536870911 - 1" ~>> o "536870910"
-  , "-536870911 - 1" ~>> o "-536870912"
-  , "-536870912 - -1" ~>> o "-536870911"
-  , "1 - 536870911" ~>> o "-536870910"
-  , "-1 - 536870911" ~>> o "-536870912"
-  , "1 - -536870910" ~>> o "536870911"
-  , "-1 - -536870912" ~>> o "536870911"
-  , "536870911 - 536870911" ~>> o "0"
-  , " 536870911 - -536870912" ~>> o "-1"
-  , "-536870911 - -536870912" ~>> o "1"
+  , (show (fixnumMax-1) ++ " - -1") ~>> show fixnumMax
+  , (show fixnumMax ++ " - 1") ~>> show (fixnumMax-1)
+  , (show (fixnumMin+1) ++ " - 1") ~>> show fixnumMin
+  , (show fixnumMin ++ " - -1") ~>> show (fixnumMin+1)
+  , ("1 - " ++ show fixnumMax) ~>> show (fixnumMin+2)
+  , ("-1 - " ++ show fixnumMax) ~>> show fixnumMin
+  , ("1 - " ++ show (fixnumMin+2)) ~>> show fixnumMax
+  , ("-1 - " ++ show fixnumMin) ~>> show fixnumMax
+  , (show fixnumMax ++ " - " ++ show fixnumMax) ~>> o "0"
+  , (" " ++ show fixnumMax ++ " - " ++ show fixnumMin) ~>> o "-1"
+  , (show (fixnumMin+1) ++ " - " ++ show fixnumMin) ~>> o "1"
   , "1 - (2 - 3)" ~>> o "2"
   , "1 - (2 - -3)" ~>> o "-4"
   , "1 - (-2 - 3)" ~>> o "6"
@@ -310,10 +314,10 @@ exec1_5Tests = "1-5" ~: TestList
   , "2 * -3" ~>> o "-6"
   , "-2 * 3" ~>> o "-6"
   , "-2 * -3" ~>> o "6"
-  , "536870911 * 1" ~>> o "536870911"
-  , "536870911 * -1" ~>> o "-536870911"
-  , "-536870912 * 1" ~>> o "-536870912"
-  , "-536870911 * -1" ~>> o "536870911"
+  , (show fixnumMax ++ " * 1") ~>> show fixnumMax
+  , (show fixnumMax ++ " * -1") ~>> show (-fixnumMax)
+  , (show fixnumMin ++ " * -1") ~>> show fixnumMin
+  , (show (fixnumMin+1) ++ " * -1") ~>> show (-(fixnumMin+1))
   , "2 * (3 * 4)" ~>> o "24"
   , "(2 * 3) * 4" ~>> o "24"
   , "((((2 * 3) * 4) * 5) * 6) * 7" ~>> o "5040"

@@ -219,7 +219,7 @@ emitBinary op lhs = case op of
 
     emit $ "movl %ebp, %eax"
     emit $ "orl $" <> tshow pairTag <> ", %eax"
-    emit $ "addl $8, %ebp"
+    emit $ "addl $" <> tshow (wordSize * 2) <> ", %ebp"
   BinaryLogicalAnd -> do
     emit $ "andl " <> lhs <> ", %eax"
   BinaryLogicalOr -> do
