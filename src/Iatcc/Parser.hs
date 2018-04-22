@@ -7,14 +7,17 @@ module Iatcc.Parser
   ) where
 
 import Control.Monad
-import Data.Text (Text, pack)
+import Data.Void (Void)
+import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Char (isLetter)
 import Text.Megaparsec hiding (parse)
-import Text.Megaparsec.Text
+import Text.Megaparsec.Char
 import Text.Megaparsec.Expr
-import qualified Text.Megaparsec.Lexer as L
-
+import qualified Text.Megaparsec.Char.Lexer as L
 import Iatcc.AST
+
+type Parser = Parsec Void Text
 
 -- Parser
 
@@ -64,7 +67,7 @@ table =
   binaryInfixl name op = InfixL (EBinary op <$ reserved name)
   binaryInfixr name op = InfixR (EBinary op <$ reserved name)
 
-parse :: Parser a -> String -> Text -> Either (ParseError (Token Text) Dec) a
+parse :: Parser a -> String -> Text -> Either (ParseError (Token Text) Void) a
 parse p = runParser (amb *> p <* eof)
 
 program :: Parser Program
@@ -121,18 +124,18 @@ signed :: Num a => Parser a -> Parser a
 signed = L.signed amb
 
 integer :: Parser Integer
-integer = lexeme L.integer
+integer = lexeme L.decimal
 
 identifier :: Parser Text
-identifier = lexeme $ fmap pack $ (:) <$> letterChar <*> many (alphaNumChar <|> char '_')
+identifier = lexeme $ fmap T.pack $ (:) <$> letterChar <*> many (alphaNumChar <|> char '_')
 
-symbol :: String -> Parser ()
+symbol :: Text -> Parser ()
 symbol = lexeme . void . string
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
-reserved :: String -> Parser ()
+reserved :: Text -> Parser ()
 reserved s
-  | isLetter (head s) = lexeme $ try $ void (string s) >> notFollowedBy alphaNumChar
-  | otherwise = lexeme $ try $ void (string s) >> notFollowedBy (satisfy (`elem` s))
+  | isLetter (T.head s) = lexeme $ try $ void (string s) >> notFollowedBy alphaNumChar
+  | otherwise = lexeme $ try $ void (string s) >> notFollowedBy (satisfy (`elem` T.unpack s))
